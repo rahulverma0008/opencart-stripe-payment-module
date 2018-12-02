@@ -34,6 +34,7 @@ class ControllerExtensionPaymentStripe extends Controller {
 		$data['amount'] = $amount;
 		$data['order_id'] = $order_info['order_id'];
 		$data['currency'] = $order_info['currency_code'];
+		$data['test_mode'] = $this->config->get('payment_stripe_environment') != 'live';
 
 		$data['form_action'] = $this->url->link('extension/payment/stripe/send', '', true);
 		$data['form_callback'] = $this->url->link('extension/payment/stripe/callback', '', true);
@@ -52,44 +53,46 @@ class ControllerExtensionPaymentStripe extends Controller {
 			return;
 		}
 
-		$source = $this->request->request['source'];
-		$order_id = $this->session->data['order_id'];
-		$stripe_environment = $this->config->get('payment_stripe_environment');
+		try {
+			$source = $this->request->request['source'];
+			$order_id = $this->session->data['order_id'];
+			$stripe_environment = $this->config->get('payment_stripe_environment');
 
-		$this->load->model('checkout/order');
-		$order_info = $this->model_checkout_order->getOrder($order_id);
+			$this->load->model('checkout/order');
+			$order_info = $this->model_checkout_order->getOrder($order_id);
 
-		$this->load->model('extension/payment/stripe');
-		if(empty($order_info)){
-			$this->model_extension_payment_stripe->log(__FILE__, __LINE__, "could not get order_info");
-			throw new Exception("Error Processing Request");
-		}
+			$this->load->model('extension/payment/stripe');
+			if(empty($order_info)){
+				throw new Exception("Your order seems lost before payment. We did not charge your payment. Please contact administrator for more information.");
+			}
 
-		// load required model
-		$this->load->model('account/customer');
-		$this->load->library('stripe');
-		$this->initStripe();
+			// load required model
+			$this->load->model('account/customer');
+			$this->load->library('stripe');
+			$this->initStripe();
 
-		// retrieve the source
-		$stripe_source = \Stripe\Source::retrieve($source);
-		$this->model_extension_payment_stripe->log(__FILE__, __LINE__, "Source::retrieve Response", $stripe_source);
+			// retrieve the source
+			$stripe_source = \Stripe\Source::retrieve($source);
 
-		if($stripe_source->status != 'chargeable') {
-			$this->model_extension_payment_stripe->log(__FILE__, __LINE__, "stripe_source->status is not chargeable");
-			throw new Exception("Source you provided is not Chargeable");
-		}
+			if($stripe_source->status != 'chargeable') {
+				throw new Exception("Stripe source you provided is not Chargeable");
+			}
 
-		// stripe charge source params
-		$stripe_charge_source = array('source' => $stripe_source->id);
+			// stripe charge source params
+			$stripe_charge_source = array('source' => $stripe_source->id);
 
-		// charge this customer and update order accordingly
-		$charge_result = $this->chargeAndUpdateOrder($stripe_charge_source, $order_info, $stripe_environment);
+			// charge this customer and update order accordingly
+			$charge_result = $this->chargeAndUpdateOrder($stripe_charge_source, $order_info, $stripe_environment);
 
-		// set redirect to success or failure page as per payment charge status
-		if($charge_result) {
-			$json['success'] = $this->url->link('checkout/success', '', true);
-		} else {
-			$json['error'] = 'Charge could not be completed. Please try again.';
+			// set redirect to success or failure page as per payment charge status
+			if($charge_result) {
+				$json['success'] = $this->url->link('checkout/success', '', true);
+			} else {
+				$json['error'] = 'Charge could not be completed. Please try again.';
+			}
+		} catch(Exception $e){
+			$this->model_extension_payment_stripe->log($e->getFile(), $e->getLine(), "Exception Caught in send() method", $e->getMessage());
+			$json['error'] = $e->getMessage();
 		}
 
 		$this->response->addHeader('Content-Type: application/json');
@@ -103,87 +106,85 @@ class ControllerExtensionPaymentStripe extends Controller {
 	 */
 	public function callback(){
 
-		$this->load->model('extension/payment/stripe');
-		if(!isset($this->request->request['secure']) || $this->request->request['secure'] != "3D"){
+		try {
+			$this->load->model('extension/payment/stripe');
+			if(!isset($this->request->request['secure']) || $this->request->request['secure'] != "3D"){
 
-			/*****************************************************************
-												Fallback:start
-			// stripe redirects back on callback with URL encoded query string
-			*****************************************************************/
-			$qry_str = html_entity_decode(($_SERVER['QUERY_STRING']));
-			$queries = array();
-			parse_str($qry_str, $queries);
-			foreach($queries as $k=>&$v){
-				$key = str_replace('amp;', '', $k);
-				$$key = $v;
+				/*****************************************************************
+													Fallback:start
+				// stripe redirects back on callback with URL encoded query string
+				*****************************************************************/
+				$qry_str = html_entity_decode(($_SERVER['QUERY_STRING']));
+				$queries = array();
+				parse_str($qry_str, $queries);
+				foreach($queries as $k=>&$v){
+					$key = str_replace('amp;', '', $k);
+					$$key = $v;
 
-				if($key == 'livemode') {
-					$stripe_environment = $v;
+					if($key == 'livemode') {
+						$stripe_environment = $v;
+					}
+
+					$key . " = " . $v . "<br/>";
+				}
+				/*****************************************************************
+													Fallback:ends
+				// stripe redirects back on callback with URL encoded query string
+				*****************************************************************/
+
+				// still source not found? we should throw an error now
+				if(!isset($source) || empty($source)){
+					throw new Exception("Invalid Request. Payment source is missing.");
 				}
 
-				$key . " = " . $v . "<br/>";
-			}
-			/*****************************************************************
-												Fallback:ends
-			// stripe redirects back on callback with URL encoded query string
-			*****************************************************************/
-
-			// still source not found? we should throw an error now
-			if(!isset($source) || empty($source)){
-				$this->model_extension_payment_stripe->log(__FILE__, __LINE__, "Source unavailable");
-				throw new Exception("Invalid request");
-			}
-
-		} else {
-			$source = $this->request->request['source'];
-			$client_secret = $this->request->request['client_secret'];
-			$order_id = $this->request->request['order_id'];
-			$stripe_environment = $this->request->request['livemode'] == "true"? 'live' : 'test';
-		}
-
-		$this->load->library('stripe');
-		$this->initStripe();
-
-		// retrieve the source
-		$stripe_source = \Stripe\Source::retrieve($source);
-		$this->model_extension_payment_stripe->log(__FILE__, __LINE__, "Source::retrieve Response", $stripe_source);
-
-		if($stripe_source['client_secret'] !== $client_secret){
-			// Source's client secret does not match with Client Secret found in request
-			$this->model_extension_payment_stripe->log(__FILE__, __LINE__, "Invalid Request", "Source's client secret does not match with Client Secret found in request");
-			throw new Exception("Invalid Request");
-		}
-
-		$this->load->model('checkout/order');
-		$order_info = $this->model_checkout_order->getOrder($order_id);
-
-		if($stripe_source['status'] != 'chargeable'){
-			// Source is not yet chargeable
-			// throw new Exception("Not Chargeable");
-			$this->model_extension_payment_stripe->log(__FILE__, __LINE__, "Not Chargeable", "Source is not in chargeable state");
-			
-			$message = 'Source ID: '.$stripe_source['id']. PHP_EOL .'Status:'. $stripe_source['status'];
-			
-			$this->model_checkout_order->addOrderHistory($order_info['order_id'], $this->config->get('payment_stripe_order_failed_status_id'), $message, false);
-			
-			$this->response->redirect($this->url->link('checkout/failure', '', true));
-
-		} else {
-
-			// stripe charge source params
-			$stripe_charge_source = array('source' => $source);
-
-			$charge_result = $this->chargeAndUpdateOrder($stripe_charge_source, $order_info, $stripe_environment);
-
-			$source_params['source'] = $stripe_source['three_d_secure']['card'];
-
-			// redirect to success or failure page as per payment charge status
-			if($charge_result){
-				$this->response->redirect($this->url->link('checkout/success', '', true));
 			} else {
-				$this->response->redirect($this->url->link('checkout/failure', '', true));
+				$source = $this->request->request['source'];
+				$client_secret = $this->request->request['client_secret'];
+				$order_id = $this->request->request['order_id'];
+				$stripe_environment = $this->request->request['livemode'] == "true"? 'live' : 'test';
 			}
-			return;
+
+			$this->load->library('stripe');
+			$this->initStripe();
+
+			// retrieve the source
+			$stripe_source = \Stripe\Source::retrieve($source);
+
+			if($stripe_source['client_secret'] !== $client_secret){
+				// Source's client secret does not match with Client Secret found in request
+				throw new Exception("Source's client secret does not match with Client Secret found in request");
+			}
+
+			$this->load->model('checkout/order');
+			$order_info = $this->model_checkout_order->getOrder($order_id);
+
+			if($stripe_source['status'] != 'chargeable'){
+				// Source is not yet chargeable
+				throw new Exception("Source is not in chargeable state");
+			} else {
+
+				// stripe charge source params
+				$stripe_charge_source = array('source' => $source);
+
+				$charge_result = $this->chargeAndUpdateOrder($stripe_charge_source, $order_info, $stripe_environment);
+
+				$source_params['source'] = $stripe_source['three_d_secure']['card'];
+
+				// redirect to success or failure page as per payment charge status
+				if($charge_result){
+					$this->response->redirect($this->url->link('checkout/success', '', true));
+				} else {
+					if(isset($this->session->data['error'])){
+						$this->response->redirect($this->url->link('checkout/cart', '', true));
+					} else {
+						$this->response->redirect($this->url->link('checkout/failure', '', true));
+					}
+				}
+			}
+		} catch(Exception $e){
+			$this->session->data['error'] = $e->getMessage();
+			$this->model_extension_payment_stripe->log($e->getFile(), $e->getLine(), "Exception Caught in send() method", $e->getMessage());
+			$this->response->redirect($this->url->link('checkout/cart', '', true));
 		}
 	}
 
@@ -200,13 +201,10 @@ class ControllerExtensionPaymentStripe extends Controller {
 		$charge_params['amount'] = $amount;
 		$charge_params['currency'] = $order_info['currency_code'];
 
-
 		// charge the customer
 		$this->load->model('extension/payment/stripe');
-		$this->model_extension_payment_stripe->log(__FILE__, __LINE__, "Charge::create Request", print_r($charge_params, true));
 		$charge = \Stripe\Charge::create($charge_params);
-		$this->model_extension_payment_stripe->log(__FILE__, __LINE__, "Charge::create Response", print_r($charge, true));
-
+	
 		if(isset($charge['id'])) {
 
 			// insert stripe order
@@ -246,7 +244,7 @@ class ControllerExtensionPaymentStripe extends Controller {
 
 		$this->load->model('extension/payment/stripe');
 		$this->model_extension_payment_stripe->log(__FILE__, __LINE__, "Unable to load stripe libraries");
-		throw new Exception("Error Processing Request");
+		throw new Exception("Unable to load stripe libraries.");
 		// return false;
 	}
 }

@@ -1,5 +1,8 @@
 <link rel="stylesheet" type="text/css" href="{{ store_url }}catalog/view/theme/default/stylesheet/stripe.css">
 <div class="payment-form-wrapper">
+	{% if test_mode %}
+	<small class="text-info">{{ text_debug }}</small>
+	{% endif %}
 	<form id="payment-form">
 		<div id="payment-request-button"></div>
 		<fieldset>

@@ -16,6 +16,7 @@ $_['text_save_card'] 		= 'Save Card';
 $_['text_choose_existing_card'] = 'Choose existing card';
 $_['text_select_a_card'] 	= 'Select a card';
 $_['text_cards'] 				= 'Cards';
+$_['text_debug'] 				= 'It is in test mode. Please use only valid test cards, visit: <a href="https://stripe.com/docs/testing" target="_blank">https://stripe.com/docs/testing</a>.';
 
 // Button
 $_['button_submit_payment']= 'Submit Payment';
