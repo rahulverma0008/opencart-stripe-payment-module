@@ -38,7 +38,7 @@
 						</label>
 						<div class="col-sm-9">
 							<select name="payment_stripe_environment" class="form-control">
-								{% if payment_stripe_environment %}
+								{% if payment_stripe_environment == 'test' %}
 								<option value="test" selected="selected">{{ text_test }}</option>
 								<option value="live">{{ text_live }}</option>
 								{% else %}
