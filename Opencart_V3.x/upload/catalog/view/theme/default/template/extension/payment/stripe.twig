@@ -39,11 +39,16 @@
 			  type: 'post',
 			  data: { 'source': source },
 			  dataType: 'json',
-			  complete: function() {
+			  beforeSend: function() {
+					
 			  },
 			  success: function(json) {
 			  		// console.log(json);
-			  		if(json['redirect']){
+			  		if (json['error']){
+			  			$(".payment-form-wrapper #card-errors").text(json['error']);
+			  			$(".payment-form-wrapper .error-stripe").addClass("visible");
+			  			$('.payment-form-wrapper').removeClass('submitting');
+			  		} else if(json['redirect']){
 			  			location = json['redirect'];
 			  			// window.location = json['redirect'];
 			  		} else if (json['success']) {
@@ -104,10 +109,6 @@
 	
 					stripe.createSource(card).then(function(result) {
 						if (result.error) {
-							// simulate ajax
-							if ($('html').hasClass('quick-checkout-page')) {
-								finishPayment('');
-							}
 							// Inform the user if there was an error
 							var errorElement = document.getElementById('card-errors');
 							errorElement.textContent = result.error.message;
@@ -117,7 +118,9 @@
 	
 							console.warn("3D Secure : "+result.source.card.three_d_secure);
 	
-							if(result.source.card.three_d_secure != 'not_supported'){
+							if(result.source.card.three_d_secure == 'required' || {{ payment_stripe_3d_secure_supported|json_encode|raw }}.indexOf(result.source.card.three_d_secure) >= 0){
+
+								console.warn("Payment will process with 3D Secure");
 
 								var secure_return_url = '{{ form_callback }}&order_id={{ order_id }}&secure=3D';
 
@@ -136,8 +139,14 @@
 									}
 								}).then(function(res) {
 									// handle result.error or result.source
-									// console.log(res.source.redirect.url);
-									window.location = res.source.redirect.url;
+									// debugger;
+									if(res.error){
+										$(".payment-form-wrapper #card-errors").text(res.error.message);
+										$(".payment-form-wrapper .error-stripe").addClass("visible");
+										$('.payment-form-wrapper').removeClass('submitting');
+									} else {
+										window.location = res.source.redirect.url;
+									}
 								});
 							} else {
 								// Send the source to your server

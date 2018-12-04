@@ -50,6 +50,23 @@
 						</div>
 					</div>
 					<div class="form-group required">
+						<label class="control-label col-sm-3" for="payment_stripe_3d_secure_supported">
+							<span data-toggle="tooltip" title="{{ entry_3d_secure_supported_help1 }}">{{ entry_3d_secure_supported }}</span>
+						</label>
+						<div class="col-sm-9">
+							{% for available in _3d_secure_available %}
+								<label class="checkbox-inline">
+									<input type="checkbox" name="payment_stripe_3d_secure_supported[]" value="{{ available }}" {% if available in payment_stripe_3d_secure_supported %}checked{% endif %}/> {{available}}
+								</label>
+							{% endfor %}
+							<br/><br/>
+							<small class="text-info">{{ entry_3d_secure_supported_help2 }}</small>
+							{% if error_3d_secure_supported %}
+							<div class="text-danger">{{ error_3d_secure_supported }}</div>
+							{% endif %}
+						</div>
+					</div>
+					<div class="form-group required">
 						<label class="control-label col-sm-3" for="payment_stripe_test_public_key">
 							<span data-toggle="tooltip" title="{{ entry_test_public_key_help }}">{{ entry_test_public_key }}</span>
 						</label>

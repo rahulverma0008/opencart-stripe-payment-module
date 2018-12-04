@@ -15,17 +15,19 @@ class ControllerExtensionPaymentStripe extends Controller {
 			$data['store_url'] = HTTP_SERVER;
 		}
 
-		if($this->config->get('payment_stripe_environment') == 'test'){
-			$data['payment_stripe_public_key'] = $this->config->get('payment_stripe_test_public_key');
-		} else {
-			$data['payment_stripe_public_key'] = $this->config->get('payment_stripe_live_public_key');
-		}
-
 		if($this->config->get('payment_stripe_environment') == 'live') {
 			$data['payment_stripe_public_key'] = $this->config->get('payment_stripe_live_public_key');
+			$data['test_mode'] = false;
 		} else {
 			$data['payment_stripe_public_key'] = $this->config->get('payment_stripe_test_public_key');
+			$data['test_mode'] = true;
 		}
+
+		$data['payment_stripe_3d_secure_supported'] = $this->config->get('payment_stripe_3d_secure_supported');
+		if(is_array($data['payment_stripe_3d_secure_supported']) == false){
+			$data['payment_stripe_3d_secure_supported'] = array('required');
+		}
+
 
 		$this->load->model('checkout/order');
 		$order_info = $this->model_checkout_order->getOrder($this->session->data['order_id']);
@@ -34,7 +36,6 @@ class ControllerExtensionPaymentStripe extends Controller {
 		$data['amount'] = $amount;
 		$data['order_id'] = $order_info['order_id'];
 		$data['currency'] = $order_info['currency_code'];
-		$data['test_mode'] = $this->config->get('payment_stripe_environment') != 'live';
 
 		$data['form_action'] = $this->url->link('extension/payment/stripe/send', '', true);
 		$data['form_callback'] = $this->url->link('extension/payment/stripe/callback', '', true);
@@ -200,6 +201,8 @@ class ControllerExtensionPaymentStripe extends Controller {
 		$charge_params = $source_params;
 		$charge_params['amount'] = $amount;
 		$charge_params['currency'] = $order_info['currency_code'];
+		$charge_params['description'] = "Charge for ".$order_info['email'];
+		$charge_params['metadata'] = array('order_id' => $order_info['order_id']);
 
 		// charge the customer
 		$this->load->model('extension/payment/stripe');
@@ -231,7 +234,7 @@ class ControllerExtensionPaymentStripe extends Controller {
 
 	private function initStripe() {
 		$this->load->library('stripe');
-		if($this->config->get('stripe_environment') == 'live' || (isset($this->request->request['livemode']) && $this->request->request['livemode'] == "true")) {
+		if($this->config->get('payment_stripe_environment') == 'live' || (isset($this->request->request['livemode']) && $this->request->request['livemode'] == "true")) {
 			$stripe_secret_key = $this->config->get('payment_stripe_live_secret_key');
 		} else {
 			$stripe_secret_key = $this->config->get('payment_stripe_test_secret_key');

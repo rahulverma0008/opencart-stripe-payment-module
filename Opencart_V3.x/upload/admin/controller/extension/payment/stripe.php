@@ -2,6 +2,8 @@
 class ControllerExtensionPaymentStripe extends Controller {
 	private $error = array();
 
+	private $_3d_secure_available = array('required', 'recommended', 'optional', 'not_supported');
+
 	public function index() {
 
 		$this->load->language('extension/payment/stripe');
@@ -111,7 +113,7 @@ class ControllerExtensionPaymentStripe extends Controller {
 		} else if($this->config->has('payment_stripe_sort_order')){
 			$data['payment_stripe_sort_order'] = (int)$this->config->get('payment_stripe_sort_order');
 		} else {
-			$data['payment_stripe_sort_order'] = 0;;
+			$data['payment_stripe_sort_order'] = 0;
 		}
 
 		if (isset($this->request->post['payment_stripe_debug'])) {
@@ -119,9 +121,16 @@ class ControllerExtensionPaymentStripe extends Controller {
 		} else if($this->config->has('payment_stripe_debug')){
 			$data['payment_stripe_debug'] = (int)$this->config->get('payment_stripe_debug');
 		} else {
-			$data['payment_stripe_debug'] = 0;;
+			$data['payment_stripe_debug'] = 0;
 		}
 
+		if (isset($this->request->post['payment_stripe_3d_secure_supported'])) {
+			$data['payment_stripe_3d_secure_supported'] = $this->request->post['payment_stripe_3d_secure_supported'];
+		} else if($this->config->has('payment_stripe_3d_secure_supported')){
+			$data['payment_stripe_3d_secure_supported'] = $this->config->get('payment_stripe_3d_secure_supported');
+		} else {
+			$data['payment_stripe_3d_secure_supported'] = array("required");
+		}
 
 		// populate errors
 		if (isset($this->error['warning'])) {
@@ -161,7 +170,14 @@ class ControllerExtensionPaymentStripe extends Controller {
 			$data['error_live_secret_key'] = '';
 		}
 
+		if (isset($this->error['error_3d_secure_supported'])) {
+			$data['error_3d_secure_supported'] = $this->error['error_3d_secure_supported'];
+		} else {
+			$data['error_3d_secure_supported'] = '';
+		}
 
+
+		$data['_3d_secure_available'] = $this->_3d_secure_available;
 		$data['user_token'] = $this->session->data['user_token'];
 
 		$data['header'] = $this->load->controller('common/header');
@@ -199,6 +215,12 @@ class ControllerExtensionPaymentStripe extends Controller {
 			}
 		} else {
 			$this->error['environment'] = $this->language->get('error_environment');
+		}
+
+		if(!isset($this->request->post['payment_stripe_3d_secure_supported']) || empty($this->request->post['payment_stripe_3d_secure_supported']) || !in_array("required", $this->request->post['payment_stripe_3d_secure_supported'])){
+			$this->error['error_3d_secure_supported'] = $this->language->get('error_3d_secure_supported_required');
+		} else if(in_array("not_supported", $this->request->post['payment_stripe_3d_secure_supported'])){
+			$this->error['error_3d_secure_supported'] = $this->language->get('error_3d_secure_supported_not_supported');
 		}
 
 		return !$this->error;
