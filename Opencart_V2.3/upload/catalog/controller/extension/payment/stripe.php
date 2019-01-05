@@ -3,7 +3,8 @@ class ControllerExtensionPaymentStripe extends Controller {
 
 	public function index() {
 
-		$this->load->language('extension/payment/stripe');
+		// load all language variables
+		$data = $this->load->language('extension/payment/stripe');
 
 		if ($this->request->server['HTTPS']) {
 			$data['store_url'] = HTTPS_SERVER;
@@ -11,17 +12,17 @@ class ControllerExtensionPaymentStripe extends Controller {
 			$data['store_url'] = HTTP_SERVER;
 		}
 
-		if($this->config->get('payment_stripe_environment') == 'live') {
-			$data['payment_stripe_public_key'] = $this->config->get('payment_stripe_live_public_key');
+		if($this->config->get('stripe_environment') == 'live') {
+			$data['stripe_public_key'] = $this->config->get('stripe_live_public_key');
 			$data['test_mode'] = false;
 		} else {
-			$data['payment_stripe_public_key'] = $this->config->get('payment_stripe_test_public_key');
+			$data['stripe_public_key'] = $this->config->get('stripe_test_public_key');
 			$data['test_mode'] = true;
 		}
 
-		$data['payment_stripe_3d_secure_supported'] = $this->config->get('payment_stripe_3d_secure_supported');
-		if(is_array($data['payment_stripe_3d_secure_supported']) == false){
-			$data['payment_stripe_3d_secure_supported'] = array('required');
+		$data['stripe_3d_secure_supported'] = $this->config->get('stripe_3d_secure_supported');
+		if(is_array($data['stripe_3d_secure_supported']) == false){
+			$data['stripe_3d_secure_supported'] = array('required');
 		}
 
 
@@ -53,7 +54,7 @@ class ControllerExtensionPaymentStripe extends Controller {
 		try {
 			$source = $this->request->request['source'];
 			$order_id = $this->session->data['order_id'];
-			$stripe_environment = $this->config->get('payment_stripe_environment');
+			$stripe_environment = $this->config->get('stripe_environment');
 
 			$this->load->model('checkout/order');
 			$order_info = $this->model_checkout_order->getOrder($order_id);
@@ -190,9 +191,10 @@ class ControllerExtensionPaymentStripe extends Controller {
 					$message = $e->getMessage();
 				}
 				$this->load->model('checkout/order');
-				$this->model_checkout_order->addOrderHistory($order_info['order_id'], $this->config->get('payment_stripe_order_failed_status_id'), $message, false);
+				$this->model_checkout_order->addOrderHistory($order_info['order_id'], $this->config->get('stripe_order_failed_status_id'), $message, false);
 			}
 
+			// redirect to cart page
 			$this->response->redirect($this->url->link('checkout/cart', '', true));
 		}
 	}
@@ -226,9 +228,9 @@ class ControllerExtensionPaymentStripe extends Controller {
 			// update order statatus & addOrderHistory
 			// paid will be true if the charge succeeded, or was successfully authorized for later capture.
 			if($charge['paid'] == true) {
-				$this->model_checkout_order->addOrderHistory($order_info['order_id'], $this->config->get('payment_stripe_order_success_status_id'), $message, false);
+				$this->model_checkout_order->addOrderHistory($order_info['order_id'], $this->config->get('stripe_order_success_status_id'), $message, false);
 			} else {
-				$this->model_checkout_order->addOrderHistory($order_info['order_id'], $this->config->get('payment_stripe_order_failed_status_id'), $message, false);
+				$this->model_checkout_order->addOrderHistory($order_info['order_id'], $this->config->get('stripe_order_failed_status_id'), $message, false);
 			}
 			
 			// charge completed successfully
@@ -242,10 +244,10 @@ class ControllerExtensionPaymentStripe extends Controller {
 
 	private function initStripe() {
 		$this->load->library('stripe');
-		if($this->config->get('payment_stripe_environment') == 'live' || (isset($this->request->request['livemode']) && $this->request->request['livemode'] == "true")) {
-			$stripe_secret_key = $this->config->get('payment_stripe_live_secret_key');
+		if($this->config->get('stripe_environment') == 'live' || (isset($this->request->request['livemode']) && $this->request->request['livemode'] == "true")) {
+			$stripe_secret_key = $this->config->get('stripe_live_secret_key');
 		} else {
-			$stripe_secret_key = $this->config->get('payment_stripe_test_secret_key');
+			$stripe_secret_key = $this->config->get('stripe_test_secret_key');
 		}
 
 		if($stripe_secret_key != '' && $stripe_secret_key != null) {
