@@ -313,3 +313,13 @@
 .payment-form-wrapper .checkbox-inline {
     margin-left: 10px; 
 }
+
+
+/* Journal theme fix */
+.quick-checkout-wrapper .right .checkout-section.checkout-payment-details.payment-stripe {
+    display: block !important;
+}
+.quick-checkout-wrapper .right .checkout-payment-details .payment-form-wrapper legend.payment-request-available {
+    display: none;
+}
+/* Journal theme fix */
