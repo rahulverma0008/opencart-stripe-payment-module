@@ -55,7 +55,7 @@ class ApiRequestor
         } elseif ($d === false) {
             return 'false';
         } elseif (is_array($d)) {
-            $res = [];
+            $res = array();
             foreach ($d as $k => $v) {
                 $res[$k] = self::_encodeObjects($v);
             }
@@ -90,13 +90,13 @@ class ApiRequestor
      */
     public function request($method, $url, $params = null, $headers = null)
     {
-        $params = $params ?: [];
-        $headers = $headers ?: [];
+        $params = $params ? $params : array();
+        $headers = $headers ? $headers : array();
         list($rbody, $rcode, $rheaders, $myApiKey) =
         $this->_requestRaw($method, $url, $params, $headers);
         $json = $this->_interpretResponse($rbody, $rcode, $rheaders);
         $resp = new ApiResponse($rbody, $rcode, $rheaders, $json);
-        return [$resp, $myApiKey];
+        return array($resp, $myApiKey);
     }
 
     /**
@@ -264,13 +264,13 @@ class ApiRequestor
         $uname = php_uname();
 
         $appInfo = Stripe::getAppInfo();
-        $ua = [
+        $ua = array(
             'bindings_version' => Stripe::VERSION,
             'lang' => 'php',
             'lang_version' => $langVersion,
             'publisher' => 'stripe',
             'uname' => $uname,
-        ];
+        );
         if ($clientInfo) {
             $ua = array_merge($clientInfo, $ua);
         }
@@ -279,11 +279,11 @@ class ApiRequestor
             $ua['application'] = $appInfo;
         }
 
-        $defaultHeaders = [
+        $defaultHeaders = array(
             'X-Stripe-Client-User-Agent' => json_encode($ua),
             'User-Agent' => $uaString,
             'Authorization' => 'Bearer ' . $apiKey,
-        ];
+        );
         return $defaultHeaders;
     }
 
@@ -350,7 +350,7 @@ class ApiRequestor
         }
 
         $combinedHeaders = array_merge($defaultHeaders, $headers);
-        $rawHeaders = [];
+        $rawHeaders = array();
 
         foreach ($combinedHeaders as $header => $value) {
             $rawHeaders[] = $header . ': ' . $value;
@@ -363,7 +363,7 @@ class ApiRequestor
             $params,
             $hasFile
         );
-        return [$rbody, $rcode, $rheaders, $myApiKey];
+        return array($rbody, $rcode, $rheaders, $myApiKey);
     }
 
     /**

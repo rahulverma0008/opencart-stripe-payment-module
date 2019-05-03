@@ -58,17 +58,17 @@ class CurlClient implements ClientInterface
     public function __construct($defaultOptions = null, $randomGenerator = null)
     {
         $this->defaultOptions = $defaultOptions;
-        $this->randomGenerator = $randomGenerator ?: new Util\RandomGenerator();
+        $this->randomGenerator = $randomGenerator ? $randomGenerator : new Util\RandomGenerator();
         $this->initUserAgentInfo();
     }
 
     public function initUserAgentInfo()
     {
         $curlVersion = curl_version();
-        $this->userAgentInfo = [
+        $this->userAgentInfo = array(
             'httplib' =>  'curl ' . $curlVersion['version'],
             'ssllib' => $curlVersion['ssl_version'],
-        ];
+        );
     }
 
     public function getDefaultOptions()
@@ -117,7 +117,7 @@ class CurlClient implements ClientInterface
     {
         $method = strtolower($method);
 
-        $opts = [];
+        $opts = array();
         if (is_callable($this->defaultOptions)) { // call defaultOptions callback, set options to return value
             $opts = call_user_func_array($this->defaultOptions, func_get_args());
             if (!is_array($opts)) {
@@ -207,7 +207,7 @@ class CurlClient implements ClientInterface
 
         list($rbody, $rcode) = $this->executeRequestWithRetries($opts, $absUrl);
 
-        return [$rbody, $rcode, $rheaders];
+        return array($rbody, $rcode, $rheaders);
     }
 
     /**
@@ -246,7 +246,7 @@ class CurlClient implements ClientInterface
             $this->handleCurlError($absUrl, $errno, $message, $numRetries);
         }
 
-        return [$rbody, $rcode];
+        return array($rbody, $rcode);
     }
 
     /**

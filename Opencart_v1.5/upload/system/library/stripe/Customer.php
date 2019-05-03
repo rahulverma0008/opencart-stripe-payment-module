@@ -43,9 +43,9 @@ class Customer extends ApiResource
     {
         static $savedNestedResources = null;
         if ($savedNestedResources === null) {
-            $savedNestedResources = new Util\Set([
+            $savedNestedResources = new Util\Set(array(
                 'source',
-            ]);
+            ));
         }
         return $savedNestedResources;
     }
@@ -59,7 +59,7 @@ class Customer extends ApiResource
      */
     public function addInvoiceItem($params = null)
     {
-        $params = $params ?: [];
+        $params = $params ? $params : array();
         $params['customer'] = $this->id;
         $ii = InvoiceItem::create($params, $this->_opts);
         return $ii;
@@ -72,7 +72,7 @@ class Customer extends ApiResource
      */
     public function invoices($params = null)
     {
-        $params = $params ?: [];
+        $params = $params ? $params : array();
         $params['customer'] = $this->id;
         $invoices = Invoice::all($params, $this->_opts);
         return $invoices;
@@ -85,7 +85,7 @@ class Customer extends ApiResource
      */
     public function invoiceItems($params = null)
     {
-        $params = $params ?: [];
+        $params = $params ? $params : array();
         $params['customer'] = $this->id;
         $iis = InvoiceItem::all($params, $this->_opts);
         return $iis;
@@ -98,7 +98,7 @@ class Customer extends ApiResource
      */
     public function charges($params = null)
     {
-        $params = $params ?: [];
+        $params = $params ? $params : array();
         $params['customer'] = $this->id;
         $charges = Charge::all($params, $this->_opts);
         return $charges;

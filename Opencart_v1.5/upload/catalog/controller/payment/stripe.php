@@ -35,8 +35,8 @@ class ControllerPaymentStripe extends Controller {
 		$this->data['order_id'] = $order_info['order_id'];
 		$this->data['currency'] = $order_info['currency_code'];
 
-		$this->data['form_action'] = $this->url->link('payment/stripe/send', '', true);
-		$this->data['form_callback'] = $this->url->link('payment/stripe/callback', '', true);
+		$this->data['form_action'] = $this->url->link('payment/stripe/send', '', 'SSL');
+		$this->data['form_callback'] = $this->url->link('payment/stripe/callback', '', 'SSL');
 
 		if (file_exists(DIR_TEMPLATE . $this->config->get('config_template') . '/template/payment/stripe.tpl')) {
 			$this->template = $this->config->get('config_template') . '/template/payment/stripe.tpl';
@@ -90,7 +90,7 @@ class ControllerPaymentStripe extends Controller {
 
 			// set redirect to success or failure page as per payment charge status
 			if($charge_result) {
-				$json['success'] = $this->url->link('checkout/success', '', true);
+				$json['success'] = $this->url->link('checkout/success', '', 'SSL');
 			} else {
 				$json['error'] = 'Charge could not be completed. Please try again.';
 			}

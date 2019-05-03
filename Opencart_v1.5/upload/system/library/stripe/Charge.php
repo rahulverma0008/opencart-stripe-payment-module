@@ -169,7 +169,7 @@ class Charge extends ApiResource
      */
     public function markAsFraudulent($opts = null)
     {
-        $params = ['fraud_details' => ['user_report' => 'fraudulent']];
+        $params = array('fraud_details' => array('user_report' => 'fraudulent'));
         $url = $this->instanceUrl();
         list($response, $opts) = $this->_request('post', $url, $params, $opts);
         $this->refreshFrom($response, $opts);

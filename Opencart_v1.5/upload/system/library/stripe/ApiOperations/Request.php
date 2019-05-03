@@ -33,12 +33,12 @@ trait Request
      *
      * @return array tuple containing (the JSON response, $options)
      */
-    protected function _request($method, $url, $params = [], $options = null)
+    protected function _request($method, $url, $params = array(), $options = null)
     {
         $opts = $this->_opts->merge($options);
         list($resp, $options) = static::_staticRequest($method, $url, $params, $opts);
         $this->setLastResponse($resp);
-        return [$resp->json, $options];
+        return array($resp->json, $options);
     }
 
     /**
@@ -56,6 +56,6 @@ trait Request
         $requestor = new \Stripe\ApiRequestor($opts->apiKey, $baseUrl);
         list($response, $opts->apiKey) = $requestor->request($method, $url, $params, $opts->headers);
         $opts->discardNonPersistentHeaders();
-        return [$response, $opts];
+        return array($response, $opts);
     }
 }

@@ -57,10 +57,10 @@ class Account extends ApiResource
     {
         static $savedNestedResources = null;
         if ($savedNestedResources === null) {
-            $savedNestedResources = new Util\Set([
+            $savedNestedResources = new Util\Set(array(
                 'external_account',
                 'bank_account',
-            ]);
+            ));
         }
         return $savedNestedResources;
     }
@@ -115,10 +115,10 @@ class Account extends ApiResource
      */
     public function deauthorize($clientId = null, $opts = null)
     {
-        $params = [
+        $params = array(
             'client_id' => $clientId,
             'stripe_user_id' => $this->id,
-        ];
+        );
         return OAuth::deauthorize($params, $opts);
     }
 
@@ -204,7 +204,7 @@ class Account extends ApiResource
             $entity = $this['legal_entity'];
             if (isset($entity->_values['additional_owners'])) {
                 $owners = $entity['additional_owners'];
-                $entityUpdate = isset($update['legal_entity']) ? $update['legal_entity'] : [];
+                $entityUpdate = isset($update['legal_entity']) ? $update['legal_entity'] : array();
                 $entityUpdate['additional_owners'] = $this->serializeAdditionalOwners($entity, $owners);
                 $update['legal_entity'] = $entityUpdate;
             }
@@ -217,7 +217,7 @@ class Account extends ApiResource
         if (isset($legalEntity->_originalValues['additional_owners'])) {
             $originalValue = $legalEntity->_originalValues['additional_owners'];
         } else {
-            $originalValue = [];
+            $originalValue = array();
         }
         if (($originalValue) && (count($originalValue) > count($additionalOwners))) {
             throw new \InvalidArgumentException(
@@ -225,11 +225,11 @@ class Account extends ApiResource
             );
         }
 
-        $updateArr = [];
+        $updateArr = array();
         foreach ($additionalOwners as $i => $v) {
             $update = ($v instanceof StripeObject) ? $v->serializeParameters() : $v;
 
-            if ($update !== []) {
+            if ($update !== array()) {
                 if (!$originalValue ||
                     !array_key_exists($i, $originalValue) ||
                     ($update != $legalEntity->serializeParamsValue($originalValue[$i], null, false, true))) {

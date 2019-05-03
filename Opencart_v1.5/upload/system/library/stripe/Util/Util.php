@@ -22,7 +22,7 @@ abstract class Util
         if (!is_array($array)) {
             return false;
         }
-        if ($array === []) {
+        if ($array === array()) {
             return true;
         }
         if (array_keys($array) !== range(0, count($array) - 1)) {
@@ -39,7 +39,7 @@ abstract class Util
      */
     public static function convertStripeObjectToArray($values)
     {
-        $results = [];
+        $results = array();
         foreach ($values as $k => $v) {
             // FIXME: this is an encapsulation violation
             if ($k[0] == '_') {
@@ -65,7 +65,7 @@ abstract class Util
      */
     public static function convertToStripeObject($resp, $opts)
     {
-        $types = [
+        $types = array(
             // data structures
             \Stripe\Collection::OBJECT_NAME => 'Stripe\\Collection',
 
@@ -132,9 +132,9 @@ abstract class Util
             \Stripe\TransferReversal::OBJECT_NAME => 'Stripe\\TransferReversal',
             \Stripe\UsageRecord::OBJECT_NAME => 'Stripe\\UsageRecord',
             \Stripe\UsageRecordSummary::OBJECT_NAME => 'Stripe\\UsageRecordSummary',
-        ];
+        );
         if (self::isList($resp)) {
-            $mapped = [];
+            $mapped = array();
             foreach ($resp as $i) {
                 array_push($mapped, self::convertToStripeObject($i, $opts));
             }
@@ -219,13 +219,13 @@ abstract class Util
         if ($h instanceof \Stripe\ApiResource) {
             return $h->id;
         } elseif (static::isList($h)) {
-            $results = [];
+            $results = array();
             foreach ($h as $v) {
                 array_push($results, static::objectsToIds($v));
             }
             return $results;
         } elseif (is_array($h)) {
-            $results = [];
+            $results = array();
             foreach ($h as $k => $v) {
                 if (is_null($v)) {
                     continue;
@@ -246,7 +246,7 @@ abstract class Util
     public static function encodeParameters($params)
     {
         $flattenedParams = self::flattenParams($params);
-        $pieces = [];
+        $pieces = array();
         foreach ($flattenedParams as $param) {
             list($k, $v) = $param;
             array_push($pieces, self::urlEncode($k) . '=' . self::urlEncode($v));
@@ -262,7 +262,7 @@ abstract class Util
      */
     public static function flattenParams($params, $parentKey = null)
     {
-        $result = [];
+        $result = array();
 
         foreach ($params as $key => $value) {
             $calculatedKey = $parentKey ? "{$parentKey}[{$key}]" : $key;
@@ -272,7 +272,7 @@ abstract class Util
             } elseif (is_array($value)) {
                 $result = array_merge($result, self::flattenParams($value, $calculatedKey));
             } else {
-                array_push($result, [$calculatedKey, $value]);
+                array_push($result, array($calculatedKey, $value));
             }
         }
 
@@ -287,7 +287,7 @@ abstract class Util
      */
     public static function flattenParamsList($value, $calculatedKey)
     {
-        $result = [];
+        $result = array();
 
         foreach ($value as $i => $elem) {
             if (self::isList($elem)) {
@@ -295,7 +295,7 @@ abstract class Util
             } elseif (is_array($elem)) {
                 $result = array_merge($result, self::flattenParams($elem, "{$calculatedKey}[{$i}]"));
             } else {
-                array_push($result, ["{$calculatedKey}[{$i}]", $elem]);
+                array_push($result, array("{$calculatedKey}[{$i}]", $elem));
             }
         }
 
@@ -327,8 +327,8 @@ abstract class Util
             $id = $params['id'];
             unset($params['id']);
         } else {
-            $params = [];
+            $params = array();
         }
-        return [$id, $params];
+        return array($id, $params);
     }
 }
