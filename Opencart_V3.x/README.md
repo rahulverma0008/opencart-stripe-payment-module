@@ -1,6 +1,6 @@
-# Stripe Payment Module with 3DS, 3DS2, SCA Secured Payments
+# Stripe Payment Module with 3DS and SCA Secured Payments
 
-# Accept payments from all Bank Card Secured with 3D Secure, 3D Secure 2, Strong Customer Authentication
+# Accept payments from all Bank Card Secured with 3D Secure, Strong Customer Authentication
 
 ## How To Install
 1) In your OpenCart admin panel go to Extensions > Installer
@@ -14,7 +14,7 @@ Congratulations! Stripe Payment Module with 3D Secure Payment Support is now ins
 ## Features
 1. Easy to install and setup
 2. Accept payments directly on your site
-3. Support 3D Secure (3DS), 3D Secure 2 (3DS2), Strong Customer Authentication (SCA) Card Payments
+3. Support 3D Secure (3DS) and Strong Customer Authentication (SCA) Card Payments
 4. Accept all Credit/Debit Card
 5. Support Test & Live Mode
 6. Multi Currency Support

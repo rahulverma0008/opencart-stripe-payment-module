@@ -51,9 +51,14 @@ class ControllerExtensionPaymentStripe extends Controller {
 
 	public function confirm(){
 		
+		$this->load->model('extension/payment/stripe');
 		$json = array('error' => 'Server did not get valid request to process');
 
 		try{
+
+			if(!isset($this->session->data['order_id'])){
+				throw new Exception("Your order seems lost in session. We did not charge your payment. Please contact administrator for more information.");
+			}
 
 			// retrieve json from POST body
 			$json_str = file_get_contents('php://input');
@@ -66,12 +71,18 @@ class ControllerExtensionPaymentStripe extends Controller {
 			$this->load->model('checkout/order');
 			$order_info = $this->model_checkout_order->getOrder($this->session->data['order_id']);
 
+			if(empty($order_info)){
+				throw new Exception("Your order seems lost before payment. We did not charge your payment. Please contact administrator for more information.");
+			}
 
 			// Create the PaymentIntent
 			if (isset($json_obj->payment_method_id)) {
 
 				// amount to charge for the order
-				$amount = $this->currency->format($order_info['total'], $order_info['currency_code'], $order_info['currency_value'], false) * 100; // multiple by 100 to get value in cents
+				$amount = $this->currency->format($order_info['total'], $order_info['currency_code'], $order_info['currency_value'], false);
+
+				// multiple by 100 to get value in cents
+				$amount = $amount * 100;
 
 				// Create the PaymentIntent
 				$intent = \Stripe\PaymentIntent::create(array(
@@ -119,14 +130,21 @@ class ControllerExtensionPaymentStripe extends Controller {
 
 				} else {
 					// Invalid status
-					$json = array('error' => 'Invalid PaymentIntent status');
+					$json = array('error' => 'Invalid PaymentIntent Status ('.$intent->status.')');
 				}
 			}
 
 		} catch (\Stripe\Error\Base $e) {
 			// Display error on client
 			$json = array('error' => $e->getMessage());
-		
+			
+			$this->model_extension_payment_stripe->log($e->getFile(), $e->getLine(), "Stripe Exception caught in confirm() method", $e->getMessage());
+
+		} catch (\Exception $e) {
+			$json = array('error' => $e->getMessage());
+
+			$this->model_extension_payment_stripe->log($e->getFile(), $e->getLine(), "Exception caught in confirm() method", $e->getMessage());
+
 		} finally {
 			$this->response->addHeader('Content-Type: application/json');
 			$this->response->setOutput(json_encode($json));
