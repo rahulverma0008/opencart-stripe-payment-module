@@ -11,7 +11,7 @@
 		<div class="container-stripe">
 			<!-- placeholder for Elements -->
 			<div id="card-element"></div>
-			<button type="button" id="card-button" class="buttons">{{ button_submit_payment }}</button>
+			<button type="button" id="button-confirm" class="buttons">{{ button_submit_payment }}</button>
 		</div>
 	</fieldset>
 	<div class="error-stripe" role="alert">
@@ -56,7 +56,7 @@ function initStripe() {
 
 		const cardElement = elements.create('card', {style: style, hidePostalCode: true});
 		cardElement.mount('#card-element');
-		const cardButton = document.getElementById('card-button');
+		const cardButton = document.getElementById('button-confirm');
 
 		var billing_details = {{ billing_details|json_encode|raw }};
 

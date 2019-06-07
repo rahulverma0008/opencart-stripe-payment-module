@@ -1,4 +1,4 @@
-# Stripe Payment Module with 3DS and SCA Secured Payments
+# Stripe Payment Module with 3D and SCA Secured Payments
 
 # Accept payments from all Bank Card Secured with 3D Secure, Strong Customer Authentication
 
