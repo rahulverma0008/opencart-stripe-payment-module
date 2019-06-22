@@ -50,23 +50,6 @@
 						</div>
 					</div>
 					<div class="form-group required">
-						<label class="control-label col-sm-3" for="stripe_3d_secure_supported">
-							<span data-toggle="tooltip" title="<?php echo $entry_3d_secure_supported_help1; ?>"><?php echo $entry_3d_secure_supported; ?></span>
-						</label>
-						<div class="col-sm-9">
-							<?php foreach($_3d_secure_available as $available) { ?>
-								<label class="checkbox-inline">
-									<input type="checkbox" name="stripe_3d_secure_supported[]" value="<?php echo $available; ?>" <?php if(in_array($available, $stripe_3d_secure_supported)) { ?>checked<?php } ?>/> <?php echo $available; ?>
-								</label>
-							<?php } ?>
-							<br/><br/>
-							<small class="text-info"><?php echo $entry_3d_secure_supported_help2; ?></small>
-							<?php if(!empty($error_3d_secure_supported)) { ?>
-							<div class="text-danger"><?php echo $error_3d_secure_supported; ?></div>
-							<?php } ?>
-						</div>
-					</div>
-					<div class="form-group required">
 						<label class="control-label col-sm-3" for="stripe_test_public_key">
 							<span data-toggle="tooltip" title="<?php echo $entry_test_public_key_help; ?>"><?php echo $entry_test_public_key; ?></span>
 						</label>

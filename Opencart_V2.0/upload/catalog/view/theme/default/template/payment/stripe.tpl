@@ -9,8 +9,9 @@
 			<legend class="card-only"><?php echo $text_pay_with_card; ?></legend>
 			<legend class="payment-request-available"><?php echo $text_or_pay_with_card; ?></legend>
 			<div class="container-stripe">
+				<!-- placeholder for Elements -->
 				<div id="card-element"></div>
-				<button type="submit" id="button-confirm" class="buttons"><?php echo $button_submit_payment; ?></button>
+				<button type="button" id="button-confirm" class="buttons"><?php echo $button_submit_payment; ?></button>
 			</div>
 		</fieldset>
 		<div class="error-stripe" role="alert">
@@ -31,44 +32,13 @@
 </div>
 <script type="text/javascript" src="https://js.stripe.com/v3/"></script>
 <script type="text/javascript">
-	var stripe = null;
-	
-	function finishPayment(source, callback) {
-		 $.ajax({
-			  url: '<?php echo $form_action; ?>',
-			  type: 'post',
-			  data: { 'source': source },
-			  dataType: 'json',
-			  beforeSend: function() {
-					
-			  },
-			  success: function(json) {
-			  		// console.log(json);
-			  		if (json['error']){
-			  			$(".payment-form-wrapper #card-errors").text(json['error']);
-			  			$(".payment-form-wrapper .error-stripe").addClass("visible");
-			  			$('.payment-form-wrapper').removeClass('submitting');
-			  		} else if(json['redirect']){
-			  			location = json['redirect'];
-			  			// window.location = json['redirect'];
-			  		} else if (json['success']) {
-						 location = json['success'];
-					}
-					if(callback)    { callback('success'); }
-			  },
-			  error: function (xhr, ajaxOptions, thrownError) {
-					console.log(xhr, ajaxOptions, thrownError);
-					if(callback)    { callback('error'); }
-			  }
-		 });
-	}
-	
-	function initStripe() {
-		 if (window.Stripe) {
-				stripe = Stripe('<?php echo $stripe_public_key; ?>');
-	
-				var elements = stripe.elements();
-				var style = {
+function initStripe() {
+	if (window.Stripe) {
+
+		const stripe = Stripe('<?php echo $stripe_public_key; ?>');
+		const elements = stripe.elements();
+
+		var style = {
 					base: {
 						color: "#32325D",
 						fontWeight: 500,
@@ -83,84 +53,71 @@
 						 color: "#E25950"
 					}
 				};
-	
-				var card = elements.create('card', {style: style, hidePostalCode: true});
-				card.mount('#card-element');
-	
-				// Handle real-time validation errors from the card Element.
-				card.addEventListener('change', function(event) {
-					var displayError = document.getElementById('card-errors');
-					
-					if (event.error) {
-						displayError.textContent = event.error.message;
-						$('.payment-form-wrapper .error-stripe').addClass('visible');
-					} else {
-						$('.payment-form-wrapper .error-stripe').removeClass('visible');
-						displayError.textContent = '';
-					}
+
+		const cardElement = elements.create('card', {style: style, hidePostalCode: true});
+		cardElement.mount('#card-element');
+		const cardButton = document.getElementById('button-confirm');
+
+		var billing_details = <?php echo json_encode($billing_details); ?>;
+
+		cardButton.addEventListener('click', async (ev) => {
+			$('.payment-form-wrapper').addClass('submitting');
+			const {paymentMethod, error} = await stripe.createPaymentMethod('card', cardElement, billing_details);
+			if (error) {
+				// Show error in payment form
+				showErrorMessage(error.message);
+			} else {
+				// Send paymentMethod.id to your server (see Step 2)
+				const response = await fetch('<?php echo $action; ?>', {
+					method: 'POST',
+					headers: { 'Content-Type': 'application/json' },
+					body: JSON.stringify({ payment_method_id: paymentMethod.id })
 				});
-	
-	
-				// Create a source or display an error when the form is submitted.
-				var form = document.getElementById('payment-form');
-				form.addEventListener('submit', function(event) {
-					event.preventDefault();
-					$('.payment-form-wrapper').addClass('submitting');
-	
-					stripe.createSource(card).then(function(result) {
-						if (result.error) {
-							// Inform the user if there was an error
-							var errorElement = document.getElementById('card-errors');
-							errorElement.textContent = result.error.message;
-							$('.payment-form-wrapper .error').addClass('visible');
-							$('.payment-form-wrapper').removeClass('submitting');
-						} else {
-	
-							console.warn("3D Secure : "+result.source.card.three_d_secure);
-	
-							if(result.source.card.three_d_secure == 'required' || <?php echo json_encode($stripe_3d_secure_supported, JSON_UNESCAPED_SLASHES); ?>.indexOf(result.source.card.three_d_secure) >= 0){
 
-								console.warn("Payment will process with 3D Secure");
+				const json = await response.json();
 
-								var secure_return_url = '<?php echo $form_callback; ?>&order_id=<?php echo $order_id; ?>&secure=3D';
+				// Handle server response (see Step 3)
+				handleServerResponse(json);
+			}
+		});
 
-								// use 3D secure only
-								stripe.createSource({
-									type: 'three_d_secure',
-									// if I uncomment below line then it show some error says "The usage `reusable` is not supported by payment method: three_d_secure."
-									// usage: 'reusable',
-									amount: parseInt('<?php echo $amount; ?>'),
-									currency: '<?php echo $currency; ?>'.toLowerCase(),
-									three_d_secure: {
-										card: result.source.id
-									},
-									redirect: {
-										return_url: secure_return_url,
-									}
-								}).then(function(res) {
-									// handle result.error or result.source
-									// debugger;
-									if(res.error){
-										$(".payment-form-wrapper #card-errors").text(res.error.message);
-										$(".payment-form-wrapper .error-stripe").addClass("visible");
-										$('.payment-form-wrapper').removeClass('submitting');
-									} else {
-										window.location = res.source.redirect.url;
-									}
-								});
-							} else {
-								// Send the source to your server
-								finishPayment(result.source.id, function (res) {
-									$('.payment-form-wrapper').removeClass('submitting');
-								});
-							}
-						}
+
+		const handleServerResponse = async (response) => {
+			if (response.error) {
+				// Show error from server on payment form
+				showErrorMessage(response.error);
+			} else if (response.requires_action) {
+				// Use Stripe.js to handle the required card action
+				const { error: errorAction, paymentIntent } = await stripe.handleCardAction(response.payment_intent_client_secret);
+	
+				if (errorAction) {
+					// Show error from Stripe.js in payment form
+					showErrorMessage(errorAction.message);
+				} else {
+					// The card action has been handled
+					// The PaymentIntent can be confirmed again on the server
+					const serverResponse = await fetch('<?php echo $action; ?>', {
+						method: 'POST',
+						headers: { 'Content-Type': 'application/json' },
+						body: JSON.stringify({ payment_intent_id: paymentIntent.id })
 					});
-				});
-	
-		 } else {
-			  setTimeout(function() { initStripe() }, 50);
-		 }
+					handleServerResponse(await serverResponse.json());
+				}
+			} else {
+				// Show success message
+				window.location = response.success;
+			}
+		}
+
+		const showErrorMessage = (error) => {
+			$(".payment-form-wrapper #card-errors").text(error);
+			$(".payment-form-wrapper .error-stripe").addClass("visible");
+			$('.payment-form-wrapper').removeClass('submitting');
+		}
+	} else {
+		 setTimeout(function() { initStripe() }, 50);
 	}
-	initStripe();
+}
+
+initStripe();
 </script>

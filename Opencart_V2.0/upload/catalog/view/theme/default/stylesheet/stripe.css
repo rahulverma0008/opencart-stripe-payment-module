@@ -323,3 +323,11 @@
     display: none;
 }
 /* Journal theme fix */
+
+
+/* d_quickcheckout theme fix */
+#d_quickcheckout #payment_view .payment-form-wrapper a {
+    display: block !important;
+}
+#d_quickcheckout .payment-form-wrapper .payment-request-available { display: none; }
+/* d_quickcheckout theme fix */

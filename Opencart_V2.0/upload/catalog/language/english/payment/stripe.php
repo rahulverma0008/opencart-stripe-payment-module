@@ -1,6 +1,6 @@
 <?php
 // Text
-$_['text_title']				= 'Credit or Debit Card (3D Secure Checkout by Stripe)';
+$_['text_title']				= 'Credit/Debit Card (3D and SCA Secured) <img src="catalog/view/theme/default/image/stripe_logo.png" alt="Stripe"/>';
 $_['text_wait']				= 'Validating your credit card...';
 $_['text_credit_card']		= 'Credit Card Details';
 $_['text_pay_with_card']	= 'Pay with card';

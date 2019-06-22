@@ -20,23 +20,32 @@ class ControllerPaymentStripe extends Controller {
 			$data['test_mode'] = true;
 		}
 
-		$data['stripe_3d_secure_supported'] = $this->config->get('stripe_3d_secure_supported');
-		if(is_array($data['stripe_3d_secure_supported']) == false){
-			$data['stripe_3d_secure_supported'] = array('required');
-		}
-
-
+		// get order info
 		$this->load->model('checkout/order');
 		$order_info = $this->model_checkout_order->getOrder($this->session->data['order_id']);
-		$amount = $this->currency->format($order_info['total'], $order_info['currency_code'], $order_info['currency_value'], false) * 100; // multiple by 100 to get value in cents
 
-		$data['amount'] = $amount;
-		$data['order_id'] = $order_info['order_id'];
-		$data['currency'] = $order_info['currency_code'];
+		// get order billing country
+		$this->load->model('localisation/country');
+  		$country_info = $this->model_localisation_country->getCountry($order_info['payment_country_id']);
+		
+		// we will use this owner info to send Stripe from client side
+		$data['billing_details'] = array(
+										'billing_details' => array(
+											'name' => $order_info['payment_firstname'] . ' ' . $order_info['payment_lastname'],
+											'email' => $order_info['email'],
+											'address' => array(
+												'line1'	=> $order_info['payment_address_1'],
+												'line2'	=> $order_info['payment_address_2'],
+												'city'	=> $order_info['payment_city'],
+												'state'	=> $order_info['payment_zone'],
+												'postal_code' => $order_info['payment_postcode'],
+												'country' => $country_info['iso_code_2']
+											)
+										)
+									);
 
-		$data['form_action'] = $this->url->link('payment/stripe/send', '', true);
-		$data['form_callback'] = $this->url->link('payment/stripe/callback', '', true);
-
+		// handles the XHR request for client side
+		$data['action'] = $this->url->link('payment/stripe/confirm', '', true);
 
 		if(version_compare(VERSION, '2.2.0.0', '>=')) {
 			return $this->load->view('payment/stripe', $data);
@@ -49,194 +58,127 @@ class ControllerPaymentStripe extends Controller {
 		}
 	}
 
-	public function send(){
 
-		$json = array();
+	public function confirm(){
+		
+		$this->load->model('payment/stripe');
+		$json = array('error' => 'Server did not get valid request to process');
 
-		if(!isset($this->request->request['source']) || trim($this->request->request['source']) == '') {
-			$json = array('error' => 'Incorrect Stripe Source');
-			$this->response->addHeader('Content-Type: application/json');
-			$this->response->setOutput(json_encode($json));
-			return;
-		}
+		try{
 
-		try {
-			$source = $this->request->request['source'];
-			$order_id = $this->session->data['order_id'];
-			$stripe_environment = $this->config->get('stripe_environment');
+			if(!isset($this->session->data['order_id'])){
+				throw new Exception("Your order seems lost in session. We did not charge your payment. Please contact administrator for more information.");
+			}
 
+			// retrieve json from POST body
+			$json_str = file_get_contents('php://input');
+			$json_obj = json_decode($json_str);
+			
+			// load stripe libraries
+			$this->initStripe();
+
+			// get order info
 			$this->load->model('checkout/order');
-			$order_info = $this->model_checkout_order->getOrder($order_id);
+			$order_info = $this->model_checkout_order->getOrder($this->session->data['order_id']);
 
-			$this->load->model('payment/stripe');
 			if(empty($order_info)){
 				throw new Exception("Your order seems lost before payment. We did not charge your payment. Please contact administrator for more information.");
 			}
 
-			// load required model
-			$this->load->model('account/customer');
-			$this->load->library('stripe');
-			$this->initStripe();
+			// Create the PaymentIntent
+			if (isset($json_obj->payment_method_id)) {
 
-			// retrieve the source
-			$stripe_source = \Stripe\Source::retrieve($source);
+				// amount to charge for the order
+				$amount = $this->currency->format($order_info['total'], $order_info['currency_code'], $order_info['currency_value'], false);
 
-			if($stripe_source->status != 'chargeable') {
-				throw new Exception("Stripe source you provided is not Chargeable");
+				// multiple by 100 to get value in cents
+				$amount = $amount * 100;
+
+				// Create the PaymentIntent
+				$intent = \Stripe\PaymentIntent::create(array(
+					'payment_method' => $json_obj->payment_method_id,
+					'amount' => $amount,
+					'currency' => strtolower($order_info['currency_code']),
+					'confirmation_method' => 'manual',
+					'confirm' => true,
+					'description' => "Charge for Order #".$order_info['order_id'],
+					'metadata' => array(
+												'order_id'	=> $order_info['order_id'],
+												'email'		=> $order_info['email']
+											),
+				));
 			}
 
-			// stripe charge source params
-			$stripe_charge_source = array('source' => $stripe_source->id);
-
-			// charge this customer and update order accordingly
-			$charge_result = $this->chargeAndUpdateOrder($stripe_charge_source, $order_info, $stripe_environment);
-
-			// set redirect to success or failure page as per payment charge status
-			if($charge_result) {
-				$json['success'] = $this->url->link('checkout/success', '', true);
-			} else {
-				$json['error'] = 'Charge could not be completed. Please try again.';
-			}
-		} catch(Exception $e){
-			$this->model_payment_stripe->log($e->getFile(), $e->getLine(), "Exception Caught in send() method", $e->getMessage());
-			$json['error'] = $e->getMessage();
-		}
-
-		$this->response->addHeader('Content-Type: application/json');
-		$this->response->setOutput(json_encode($json));
-		return;
-	}
-
-	/**
-	 * this method handles 3D Secure Payments callback
-	 * @returns boolean
-	 */
-	public function callback(){
-
-		try {
-			$this->load->model('payment/stripe');
-			if(!isset($this->request->request['secure']) || $this->request->request['secure'] != "3D"){
-
-				/*****************************************************************
-													Fallback:start
-				// stripe redirects back on callback with URL encoded query string
-				*****************************************************************/
-				$qry_str = html_entity_decode(($_SERVER['QUERY_STRING']));
-				$queries = array();
-				parse_str($qry_str, $queries);
-				foreach($queries as $k=>&$v){
-					$key = str_replace('amp;', '', $k);
-					$$key = $v;
-
-					if($key == 'livemode') {
-						$stripe_environment = $v;
-					}
-
-					$key . " = " . $v . "<br/>";
-				}
-				/*****************************************************************
-													Fallback:ends
-				// stripe redirects back on callback with URL encoded query string
-				*****************************************************************/
-
-				// still source not found? we should throw an error now
-				if(!isset($source) || empty($source)){
-					throw new Exception("Invalid Request. Payment source is missing.");
-				}
-
-			} else {
-				$source = $this->request->request['source'];
-				$client_secret = $this->request->request['client_secret'];
-				$order_id = $this->request->request['order_id'];
-				$stripe_environment = $this->request->request['livemode'] == "true"? 'live' : 'test';
+			if (isset($json_obj->payment_intent_id)) {
+				$intent = \Stripe\PaymentIntent::retrieve(
+					 $json_obj->payment_intent_id
+				);
+				$intent->confirm();
 			}
 
-			$this->load->library('stripe');
-			$this->initStripe();
+			if(!empty($intent)) {
+				if ($intent->status == 'requires_source_action' &&
+				$intent->next_action->type == 'use_stripe_sdk') {
+					// Tell the client to handle the action
+					$json = array(
+						'requires_action' => true,
+						'payment_intent_client_secret' => $intent->client_secret
+					);
+				} else if ($intent->status == 'succeeded') {
+					// The payment didn’t need any additional actions and completed!
+					// Handle post-payment fulfillment
 
-			// retrieve the source
-			$stripe_source = \Stripe\Source::retrieve($source);
+					// charge this customer and update order accordingly
+					$charge_result = $this->chargeAndUpdateOrder($intent, $order_info);
 
-			if($stripe_source['client_secret'] !== $client_secret){
-				// Source's client secret does not match with Client Secret found in request
-				throw new Exception("Source's client secret does not match with Client Secret found in request");
-			}
-
-			$this->load->model('checkout/order');
-			$order_info = $this->model_checkout_order->getOrder($order_id);
-
-			if($stripe_source['status'] != 'chargeable'){
-				// Source is not yet chargeable
-				throw new Exception("Source is not in chargeable state");
-			} else {
-
-				// stripe charge source params
-				$stripe_charge_source = array('source' => $source);
-
-				$charge_result = $this->chargeAndUpdateOrder($stripe_charge_source, $order_info, $stripe_environment);
-
-				$source_params['source'] = $stripe_source['three_d_secure']['card'];
-
-				// redirect to success or failure page as per payment charge status
-				if($charge_result){
-					$this->response->redirect($this->url->link('checkout/success', '', true));
-				} else {
-					if(isset($this->session->data['error'])){
-						$this->response->redirect($this->url->link('checkout/cart', '', true));
+					// set redirect to success or failure page as per payment charge status
+					if($charge_result) {
+						$json = array('success' => $this->url->link('checkout/success', '', true));
 					} else {
-						$this->response->redirect($this->url->link('checkout/failure', '', true));
+						$json = array('error' => 'Payment could not be completed. Please try again.');
 					}
-				}
-			}
-		} catch(Exception $e){
-			$this->session->data['error'] = $e->getMessage();
-			$this->model_payment_stripe->log($e->getFile(), $e->getLine(), "Exception Caught in send() method", $e->getMessage());
 
-			// mark this order as failed, otherwise it will become a missing order
-			if(isset($order_info['order_id'])) {
-				if(isset($stripe_source['id']) && isset($stripe_source['status'])){
-					$message = 'Charge ID: '.$stripe_source['id']. PHP_EOL .'Status: '. $stripe_source['status'];
 				} else {
-					$message = $e->getMessage();
+					// Invalid status
+					$json = array('error' => 'Invalid PaymentIntent Status ('.$intent->status.')');
 				}
-				$this->load->model('checkout/order');
-				$this->model_checkout_order->addOrderHistory($order_info['order_id'], $this->config->get('stripe_order_failed_status_id'), $message, false);
 			}
 
-			// redirect to cart page
-			$this->response->redirect($this->url->link('checkout/cart', '', true));
+		} catch (\Stripe\Error\Base $e) {
+			// Display error on client
+			$json = array('error' => $e->getMessage());
+			
+			$this->model_payment_stripe->log($e->getFile(), $e->getLine(), "Stripe Exception caught in confirm() method", $e->getMessage());
+
+		} catch (\Exception $e) {
+			$json = array('error' => $e->getMessage());
+
+			$this->model_payment_stripe->log($e->getFile(), $e->getLine(), "Exception caught in confirm() method", $e->getMessage());
+
+		} finally {
+			$this->response->addHeader('Content-Type: application/json');
+			$this->response->setOutput(json_encode($json));
+			return;
 		}
 	}
+
 
 	/**
 	 * this method charges the source and update order accordingly
 	 * @returns boolean
 	 */
-	private function chargeAndUpdateOrder($source_params, $order_info, $stripe_environment){
+	private function chargeAndUpdateOrder($intent, $order_info){
 
-		// get the order total amount in currency it was paid
-		$amount = $this->currency->format($order_info['total'], $order_info['currency_code'], $order_info['currency_value'], false) * 100;
-
-		$charge_params = $source_params;
-		$charge_params['amount'] = $amount;
-		$charge_params['currency'] = $order_info['currency_code'];
-		$charge_params['description'] = "Charge for ".$order_info['email'];
-		$charge_params['metadata'] = array('order_id' => $order_info['order_id']);
-
-		// charge the customer
-		$this->load->model('payment/stripe');
-		$charge = \Stripe\Charge::create($charge_params);
-	
-		if(isset($charge['id'])) {
+		if(isset($intent->id)) {
 
 			// insert stripe order
-			$message = 'Charge ID: '.$charge['id']. PHP_EOL .'Status: '. $charge['status'];
+			$message = 'Payment Intent ID: '.$intent->id. PHP_EOL .'Status: '. $intent->status;
 
 			$this->load->model('checkout/order');
 
 			// update order statatus & addOrderHistory
 			// paid will be true if the charge succeeded, or was successfully authorized for later capture.
-			if($charge['paid'] == true) {
+			if($intent->status == "succeeded") {
 				$this->model_checkout_order->addOrderHistory($order_info['order_id'], $this->config->get('stripe_order_success_status_id'), $message, false);
 			} else {
 				$this->model_checkout_order->addOrderHistory($order_info['order_id'], $this->config->get('stripe_order_failed_status_id'), $message, false);
