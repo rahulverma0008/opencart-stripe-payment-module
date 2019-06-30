@@ -117,7 +117,7 @@ class ControllerPaymentStripe extends Controller {
 			}
 
 			if(!empty($intent)) {
-				if ($intent->status == 'requires_source_action' &&
+				if (($intent->status == 'requires_action' || $intent->status == 'requires_source_action') &&
 				$intent->next_action->type == 'use_stripe_sdk') {
 					// Tell the client to handle the action
 					$json = array(
