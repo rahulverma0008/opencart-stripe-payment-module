@@ -2,8 +2,6 @@
 class ControllerPaymentStripe extends Controller {
 	private $error = array();
 
-	private $_3d_secure_available = array('required', 'recommended', 'optional', 'not_supported');
-
 	public function index() {
 
 		// load all language variables
@@ -128,14 +126,6 @@ class ControllerPaymentStripe extends Controller {
 			$this->data['stripe_debug'] = 0;
 		}
 
-		if (isset($this->request->post['stripe_3d_secure_supported'])) {
-			$this->data['stripe_3d_secure_supported'] = $this->request->post['stripe_3d_secure_supported'];
-		} else if($this->config->has('stripe_3d_secure_supported')){
-			$this->data['stripe_3d_secure_supported'] = $this->config->get('stripe_3d_secure_supported');
-		} else {
-			$this->data['stripe_3d_secure_supported'] = array("required");
-		}
-
 		// populate errors
 		if (isset($this->error['warning'])) {
 			$this->data['error_warning'] = $this->error['warning'];
@@ -174,16 +164,7 @@ class ControllerPaymentStripe extends Controller {
 			$this->data['error_live_secret_key'] = '';
 		}
 
-		if (isset($this->error['error_3d_secure_supported'])) {
-			$this->data['error_3d_secure_supported'] = $this->error['error_3d_secure_supported'];
-		} else {
-			$this->data['error_3d_secure_supported'] = '';
-		}
-
-
-		$this->data['_3d_secure_available'] = $this->_3d_secure_available;
 		$this->data['token'] = $this->session->data['token'];
-
 
 		$this->template = 'payment/stripe.tpl';
 		$this->children = array(
@@ -222,12 +203,6 @@ class ControllerPaymentStripe extends Controller {
 			}
 		} else {
 			$this->error['environment'] = $this->language->get('error_environment');
-		}
-
-		if(!isset($this->request->post['stripe_3d_secure_supported']) || empty($this->request->post['stripe_3d_secure_supported']) || !in_array("required", $this->request->post['stripe_3d_secure_supported'])){
-			$this->error['error_3d_secure_supported'] = $this->language->get('error_3d_secure_supported_required');
-		} else if(in_array("not_supported", $this->request->post['stripe_3d_secure_supported'])){
-			$this->error['error_3d_secure_supported'] = $this->language->get('error_3d_secure_supported_not_supported');
 		}
 
 		if (!$this->error) {

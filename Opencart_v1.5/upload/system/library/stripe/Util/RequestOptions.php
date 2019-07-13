@@ -9,16 +9,16 @@ class RequestOptions
     /**
      * @var array A list of headers that should be persisted across requests.
      */
-    public static $HEADERS_TO_PERSIST = array(
+    public static $HEADERS_TO_PERSIST = [
         'Stripe-Account',
         'Stripe-Version',
-    );
+    ];
 
     public $headers;
     public $apiKey;
     public $apiBase;
 
-    public function __construct($key = null, $headers = array(), $base = null)
+    public function __construct($key = null, $headers = [], $base = null)
     {
         $this->apiKey = $key;
         $this->headers = $headers;
@@ -70,15 +70,15 @@ class RequestOptions
         }
 
         if (is_null($options)) {
-            return new RequestOptions(null, array(), null);
+            return new RequestOptions(null, [], null);
         }
 
         if (is_string($options)) {
-            return new RequestOptions($options, array(), null);
+            return new RequestOptions($options, [], null);
         }
 
         if (is_array($options)) {
-            $headers = array();
+            $headers = [];
             $key = null;
             $base = null;
             if (array_key_exists('api_key', $options)) {

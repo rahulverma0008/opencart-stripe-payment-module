@@ -40,7 +40,7 @@ class Recipient extends ApiResource
      */
     public function transfers($params = null)
     {
-        $params = $params ? $params : array();
+        $params = $params ?: [];
         $params['recipient'] = $this->id;
         $transfers = Transfer::all($params, $this->_opts);
         return $transfers;

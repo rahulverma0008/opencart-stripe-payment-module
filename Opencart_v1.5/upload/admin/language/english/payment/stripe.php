@@ -54,15 +54,9 @@ $_['entry_live_secret_key_help'] = 'Secret Key for Production Accuont';
 $_['entry_debug'] = 'Debug';
 $_['entry_debug_help'] = 'Enable this will write Stripe Payment logs to help you finding any issue';
 
-$_['entry_3d_secure_supported'] = 'Enable 3D Secure for';
-$_['entry_3d_secure_supported_help1'] = 'Check the card types you want to secure with 3D authentication payment.';
-$_['entry_3d_secure_supported_help2'] = $_['entry_3d_secure_supported_help1'].' Click <a target="_blank" href="https://stripe.com/docs/sources/three-d-secure#check-requirement">here</a> for more info';
-
 // Error
 $_['error_permission']	= 'Warning: You do not have permission to modify Stripe Payment!';
 $_['error_test_public_key'] = 'Test Public Key Required!';
 $_['error_test_secret_key'] = 'Test Secret Key Required!';
 $_['error_live_public_key'] = 'Live Public Key Required!';
 $_['error_live_secret_key'] = 'Live Secret Key Required!';
-$_['error_3d_secure_supported_required'] = 'You can not remove 3D Secure authentication for "required" cards!';
-$_['error_3d_secure_supported_not_supported'] = 'You can not add 3D Secure authentication for "not_supported" cards!';

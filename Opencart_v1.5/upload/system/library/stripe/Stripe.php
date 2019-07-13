@@ -141,7 +141,7 @@ class Stripe
      */
     public static function getCABundlePath()
     {
-        return self::$caBundlePath ? self::$caBundlePath : self::getDefaultCABundlePath();
+        return self::$caBundlePath ?: self::getDefaultCABundlePath();
     }
 
     /**
@@ -201,7 +201,7 @@ class Stripe
      */
     public static function setAppInfo($appName, $appVersion = null, $appUrl = null, $appPartnerId = null)
     {
-        self::$appInfo = self::$appInfo ? self::$appInfo : array();
+        self::$appInfo = self::$appInfo ?: [];
         self::$appInfo['name'] = $appName;
         self::$appInfo['partner_id'] = $appPartnerId;
         self::$appInfo['url'] = $appUrl;

@@ -103,8 +103,8 @@ class StripeObject implements \ArrayAccess, \Countable, \JsonSerializable
     {
         list($id, $this->_retrieveOptions) = Util\Util::normalizeId($id);
         $this->_opts = Util\RequestOptions::parse($opts);
-        $this->_originalValues = array();
-        $this->_values = array();
+        $this->_originalValues = [];
+        $this->_values = [];
         $this->_unsavedValues = new Util\Set();
         $this->_transientValues = new Util\Set();
         if ($id !== null) {
@@ -298,7 +298,7 @@ class StripeObject implements \ArrayAccess, \Countable, \JsonSerializable
      */
     public function serializeParameters($force = false)
     {
-        $updateParams = array();
+        $updateParams = [];
 
         foreach ($this->_values as $k => $v) {
             // There are a few reasons that we may want to add in a parameter for
@@ -376,7 +376,7 @@ class StripeObject implements \ArrayAccess, \Countable, \JsonSerializable
         } elseif (is_array($value)) {
             if (Util\Util::isList($value)) {
                 // Sequential array, i.e. a list
-                $update = array();
+                $update = [];
                 foreach ($value as $v) {
                     array_push($update, $this->serializeParamsValue($v, null, true, $force));
                 }
@@ -456,7 +456,7 @@ class StripeObject implements \ArrayAccess, \Countable, \JsonSerializable
     protected static function deepCopy($obj)
     {
         if (is_array($obj)) {
-            $copy = array();
+            $copy = [];
             foreach ($obj as $k => $v) {
                 $copy[$k] = self::deepCopy($v);
             }

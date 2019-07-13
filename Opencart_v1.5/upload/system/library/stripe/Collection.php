@@ -19,7 +19,7 @@ class Collection extends StripeObject
 
     use ApiOperations\Request;
 
-    protected $_requestParams = array();
+    protected $_requestParams = [];
 
     /**
      * @return string The base URL for the given class.
@@ -89,11 +89,11 @@ class Collection extends StripeObject
         if (isset($url['query'])) {
             // If the URL contains a query param, parse it out into $params so they
             // don't interact weirdly with each other.
-            $query = array();
+            $query = [];
             parse_str($url['query'], $query);
-            $params = array_merge($params ? $params : array(), $query);
+            $params = array_merge($params ?: [], $query);
         }
 
-        return array($url['path'], $params);
+        return [$url['path'], $params];
     }
 }

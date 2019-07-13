@@ -11,7 +11,6 @@
 
 .payment-form-wrapper {
     background-color: #f6f9fc;
-
     display: -ms-flexbox;
     display: flex;
     -ms-flex-direction: column;
@@ -23,15 +22,13 @@
     flex: auto;
     min-width: 100%;
     min-height: 350px;
-
     -ms-flex-align: center;
     align-items: center;
     border-radius: 4px;
     box-shadow: 0 7px 14px rgba(50, 50, 93, 0.1), 0 3px 6px rgba(0, 0, 0, 0.08);
-    margin-left: -10px;
+   /* margin-left: -10px;
     margin-right: -10px;
-
-    padding: 40px;
+    padding: 40px;*/
 }
 
 @media (max-width: 670px) {
@@ -253,7 +250,7 @@
     height: 100%;
     top: 0;
     left: 0;
-    padding: 10px;
+    /*padding: 10px;*/
     text-align: center;
     pointer-events: none;
     overflow: hidden;
