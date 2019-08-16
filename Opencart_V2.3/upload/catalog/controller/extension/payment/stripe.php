@@ -139,12 +139,12 @@ class ControllerExtensionPaymentStripe extends Controller {
 			// Display error on client
 			$json = array('error' => $e->getMessage());
 			
-			$this->model_payment_stripe->log($e->getFile(), $e->getLine(), "Stripe Exception caught in confirm() method", $e->getMessage());
+			$this->model_extension_payment_stripe->log($e->getFile(), $e->getLine(), "Stripe Exception caught in confirm() method", $e->getMessage());
 
 		} catch (\Exception $e) {
 			$json = array('error' => $e->getMessage());
 
-			$this->model_payment_stripe->log($e->getFile(), $e->getLine(), "Exception caught in confirm() method", $e->getMessage());
+			$this->model_extension_payment_stripe->log($e->getFile(), $e->getLine(), "Exception caught in confirm() method", $e->getMessage());
 
 		}
 		
