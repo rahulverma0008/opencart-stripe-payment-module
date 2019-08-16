@@ -155,6 +155,7 @@ class ControllerPaymentStripe extends Controller {
 			$this->model_payment_stripe->log($e->getFile(), $e->getLine(), "Exception caught in confirm() method", $e->getMessage());
 
 		}
+		
 		$this->response->addHeader('Content-Type: application/json');
 		$this->response->setOutput(json_encode($json));
 		return;
