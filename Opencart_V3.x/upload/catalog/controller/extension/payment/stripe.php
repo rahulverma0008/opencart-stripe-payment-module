@@ -57,6 +57,7 @@ class ControllerExtensionPaymentStripe extends Controller {
 		try{
 
 			if(!isset($this->session->data['order_id'])){
+				$this->model_extension_payment_stripe->log(__FILE__, __LINE__, "Session Data ", $this->session->data);
 				throw new Exception("Your order seems lost in session. We did not charge your payment. Please contact administrator for more information.");
 			}
 
@@ -72,6 +73,7 @@ class ControllerExtensionPaymentStripe extends Controller {
 			$order_info = $this->model_checkout_order->getOrder($this->session->data['order_id']);
 
 			if(empty($order_info)){
+				$this->model_extension_payment_stripe->log(__FILE__, __LINE__, "Order Data ", $this->order_info);
 				throw new Exception("Your order seems lost before payment. We did not charge your payment. Please contact administrator for more information.");
 			}
 
@@ -99,7 +101,9 @@ class ControllerExtensionPaymentStripe extends Controller {
 				));
 			}
 
-			if (isset($json_obj->payment_intent_id)) {
+			// else if payment intent id sent from client side (stripe UI)
+			// then retrieve the intent and charge it
+			else if (isset($json_obj->payment_intent_id)) {
 				$intent = \Stripe\PaymentIntent::retrieve(
 					 $json_obj->payment_intent_id
 				);
@@ -107,6 +111,8 @@ class ControllerExtensionPaymentStripe extends Controller {
 			}
 
 			if(!empty($intent)) {
+
+				// check if intent required any further action
 				if (($intent->status == 'requires_action' || $intent->status == 'requires_source_action') &&
 				$intent->next_action->type == 'use_stripe_sdk') {
 					// Tell the client to handle the action
@@ -114,7 +120,10 @@ class ControllerExtensionPaymentStripe extends Controller {
 						'requires_action' => true,
 						'payment_intent_client_secret' => $intent->client_secret
 					);
-				} else if ($intent->status == 'succeeded') {
+				}
+
+				// payment is success, no further action required
+				else if ($intent->status == 'succeeded') {
 					// The payment didn’t need any additional actions and completed!
 					// Handle post-payment fulfillment
 
@@ -129,7 +138,7 @@ class ControllerExtensionPaymentStripe extends Controller {
 					}
 
 				} else {
-					// Invalid status
+					// Unexpected Payment Intent Status
 					$json = array('error' => 'Invalid PaymentIntent Status ('.$intent->status.')');
 				}
 			}

@@ -66,6 +66,7 @@ class ControllerPaymentStripe extends Controller {
 		try{
 
 			if(!isset($this->session->data['order_id'])){
+				$this->model_payment_stripe->log(__FILE__, __LINE__, "Session Data ", $this->session->data);
 				throw new Exception("Your order seems lost in session. We did not charge your payment. Please contact administrator for more information.");
 			}
 
@@ -81,6 +82,7 @@ class ControllerPaymentStripe extends Controller {
 			$order_info = $this->model_checkout_order->getOrder($this->session->data['order_id']);
 
 			if(empty($order_info)){
+				$this->model_payment_stripe->log(__FILE__, __LINE__, "Order Data ", $this->order_info);
 				throw new Exception("Your order seems lost before payment. We did not charge your payment. Please contact administrator for more information.");
 			}
 
