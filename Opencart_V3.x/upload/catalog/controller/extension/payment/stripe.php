@@ -43,8 +43,11 @@ class ControllerExtensionPaymentStripe extends Controller {
 										)
 									);
 
+		// get current language code for locale, this will let Stripe JS elements to know which languages to use for its own elements
+		$data['locale'] = $this->language->get('code');
+
 		// handles the XHR request for client side
-		$data['action'] = $this->url->link('extension/payment/stripe/confirm', '', true);
+		$data['action'] = $this->url->link('extension/payment/stripe/confirm', 'format=json', true);
 
 		return $this->load->view('extension/payment/stripe', $data);
 	}
@@ -86,6 +89,11 @@ class ControllerExtensionPaymentStripe extends Controller {
 				// multiple by 100 to get value in cents
 				$amount = $amount * 100;
 
+				// get order shipping country
+				$this->load->model('localisation/country');
+		  		$billing_country_info = $this->model_localisation_country->getCountry($order_info['payment_country_id']);
+		  		$shipping_country_info = $this->model_localisation_country->getCountry($order_info['shipping_country_id']);
+
 				// Create the PaymentIntent
 				$intent = \Stripe\PaymentIntent::create(array(
 					'payment_method' => $json_obj->payment_method_id,
@@ -94,10 +102,29 @@ class ControllerExtensionPaymentStripe extends Controller {
 					'confirmation_method' => 'manual',
 					'confirm' => true,
 					'description' => "Charge for Order #".$order_info['order_id'],
+					'shipping' => array(
+										'name' => $order_info['shipping_firstname'] . ' ' . $order_info['shipping_lastname'],
+										'address' => array(
+											'line1'	=> $order_info['shipping_address_1'],
+											'line2'	=> $order_info['shipping_address_2'],
+											'city'	=> $order_info['shipping_city'],
+											'state'	=> $order_info['shipping_zone'],
+											'postal_code' => $order_info['shipping_postcode'],
+											'country' => $shipping_country_info['iso_code_2'],
+										)
+									),
 					'metadata' => array(
-												'order_id'	=> $order_info['order_id'],
-												'email'		=> $order_info['email']
-											),
+										'OrderId' => $order_info['order_id'],
+										'FirstName' => $order_info['payment_firstname'],
+										'LastName' => $order_info['payment_lastname'],
+										'Address' => $order_info['payment_address_1'] . ', ' . $order_info['payment_address_2'],
+										'City' => $order_info['payment_city'],
+										'Province' => $order_info['payment_zone'],
+										'PostalCode' => $order_info['payment_postcode'],
+										'Country' => $billing_country_info['iso_code_2'],
+										'Email' => $order_info['email'],
+										'Phone' => $order_info['telephone'],
+									),
 				));
 			}
 

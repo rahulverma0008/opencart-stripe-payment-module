@@ -36,7 +36,7 @@ function initStripe() {
 	if (window.Stripe) {
 
 		const stripe = Stripe('{{ payment_stripe_public_key }}');
-		const elements = stripe.elements();
+		const elements = stripe.elements({% if locale %}{"locale": "{{ locale }}"}{% endif %});
 
 		var style = {
 					base: {
