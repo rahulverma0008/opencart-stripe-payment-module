@@ -74,7 +74,7 @@ function initStripe() {
 					body: JSON.stringify({ payment_method_id: paymentMethod.id })
 				});
 
-				const json = await response.json();
+				const json = await response.text();
 
 				// Handle server response (see Step 3)
 				handleServerResponse(json);
@@ -83,6 +83,16 @@ function initStripe() {
 
 
 		const handleServerResponse = async (response) => {
+
+			try {
+				response = JSON.parse(response);
+			} catch {
+				console.warn("Stripe App have encountered with some error. This error might not be caused by Stripe App. Such errors come when Stripe App receive unexpected JSON response from your server.");
+				console.warn("Please see below the response your server sent, whereas JSON was expected by Stripe App.");
+				console.error(response);
+				return;
+			}
+
 			if (response.error) {
 				// Show error from server on payment form
 				showErrorMessage(response.error);
@@ -101,7 +111,7 @@ function initStripe() {
 						headers: { 'Content-Type': 'application/json' },
 						body: JSON.stringify({ payment_intent_id: paymentIntent.id })
 					});
-					handleServerResponse(await serverResponse.json());
+					handleServerResponse(await serverResponse.text());
 				}
 			} else {
 				// Show success message
