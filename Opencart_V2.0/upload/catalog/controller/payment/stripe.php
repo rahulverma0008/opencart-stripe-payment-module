@@ -30,17 +30,15 @@ class ControllerPaymentStripe extends Controller {
 		
 		// we will use this owner info to send Stripe from client side
 		$data['billing_details'] = array(
-										'billing_details' => array(
-											'name' => $order_info['payment_firstname'] . ' ' . $order_info['payment_lastname'],
-											'email' => $order_info['email'],
-											'address' => array(
-												'line1'	=> $order_info['payment_address_1'],
-												'line2'	=> $order_info['payment_address_2'],
-												'city'	=> $order_info['payment_city'],
-												'state'	=> $order_info['payment_zone'],
-												'postal_code' => $order_info['payment_postcode'],
-												'country' => $country_info['iso_code_2']
-											)
+										'name' => $order_info['payment_firstname'] . ' ' . $order_info['payment_lastname'],
+										'email' => $order_info['email'],
+										'address' => array(
+											'line1'	=> $order_info['payment_address_1'],
+											'line2'	=> $order_info['payment_address_2'],
+											'city'	=> $order_info['payment_city'],
+											'state'	=> $order_info['payment_zone'],
+											'postal_code' => $order_info['payment_postcode'],
+											'country' => $country_info['iso_code_2']
 										)
 									);
 
