@@ -24,10 +24,6 @@ class ControllerPaymentStripe extends Controller {
 		$this->load->model('checkout/order');
 		$order_info = $this->model_checkout_order->getOrder($this->session->data['order_id']);
 
-		// get order billing country
-		$this->load->model('localisation/country');
-  		$country_info = $this->model_localisation_country->getCountry($order_info['payment_country_id']);
-		
 		// we will use this owner info to send Stripe from client side
 		$data['billing_details'] = array(
 										'name' => $order_info['payment_firstname'] . ' ' . $order_info['payment_lastname'],
@@ -38,7 +34,7 @@ class ControllerPaymentStripe extends Controller {
 											'city'	=> $order_info['payment_city'],
 											'state'	=> $order_info['payment_zone'],
 											'postal_code' => $order_info['payment_postcode'],
-											'country' => $country_info['iso_code_2']
+											'country' => $order_info['payment_iso_code_2']
 										)
 									);
 
