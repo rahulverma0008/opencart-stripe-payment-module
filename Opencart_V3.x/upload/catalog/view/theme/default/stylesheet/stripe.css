@@ -22,7 +22,7 @@
     -ms-flex: auto;
     flex: auto;
     min-width: 100%;
-    min-height: 350px;
+    min-height: 300px;
 
     -ms-flex-align: center;
     align-items: center;
@@ -31,7 +31,7 @@
     margin-left: -10px;
     margin-right: -10px;
 
-    padding: 40px;
+    padding: 20px;
 }
 
 @media (max-width: 670px) {
@@ -139,6 +139,7 @@
 .payment-form-wrapper #card-element {
     padding: 10px;
     margin-bottom: 2px;
+    min-width: 300px;
 }
 
 .payment-form-wrapper input {

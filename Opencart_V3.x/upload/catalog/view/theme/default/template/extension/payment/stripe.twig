@@ -71,7 +71,7 @@ function initStripe() {
 			}).then(function(result){
 				if (result.error) {
 					// Show error in payment form
-					showErrorMessage(result.message);
+					showErrorMessage(result.error.message);
 				} else {
 					// Send paymentMethod.id to your server (see Step 2)
 					$.ajax({

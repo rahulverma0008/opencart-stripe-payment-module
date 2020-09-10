@@ -5,11 +5,6 @@ class ModelExtensionPaymentStripe extends Model {
 
 		$status = true;
 
-		// stripe does not allow payment for 0 amount
-		if($total <= 0) {
-			$status = false; 
-		}
-
 		$method_data = array();
 
 		if ($status) {
