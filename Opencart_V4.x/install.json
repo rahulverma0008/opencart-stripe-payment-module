@@ -1,0 +1,7 @@
+{
+	"name": "Stripe Payment Module",
+	"description": "Accept payments from all Bank Cards Secured with 3D Secure and SCA (Strong Customer Authentication)",
+	"version": "2.0.0",
+	"author": "Rahul Verma",
+	"link": "mailto:modulegarage@gmail.com"
+}
