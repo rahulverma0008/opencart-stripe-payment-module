@@ -87,8 +87,8 @@ class ControllerPaymentStripe extends Controller {
 				// amount to charge for the order
 				$amount = $this->currency->format($order_info['total'], $order_info['currency_code'], $order_info['currency_value'], false);
 
-				// multiple by 100 to get value in cents
-				$amount = $amount * 100;
+				// amount in the smallest unit of the currency (cents)
+				$amount = $this->getAmount($order_info);
 
 				// Create the PaymentIntent
 				$intent = \Stripe\PaymentIntent::create(array(
@@ -109,6 +109,9 @@ class ControllerPaymentStripe extends Controller {
 				$intent = \Stripe\PaymentIntent::retrieve(
 					 $json_obj->payment_intent_id
 				);
+				// the payment must be the one created for this order
+				$this->validateIntent($intent, $order_info);
+
 				$intent->confirm();
 			}
 
@@ -186,6 +189,40 @@ class ControllerPaymentStripe extends Controller {
 		} else {
 			// charge could not be completed
 			return false;
+		}
+	}
+
+	/**
+	 * Amount of the order in the smallest unit of its currency (an integer, e.g. cents).
+	 * The same value is used to create a payment and to verify one.
+	 */
+	private function getAmount($order_info) {
+		$amount = $this->currency->format($order_info['total'], $order_info['currency_code'], $order_info['currency_value'], false);
+
+		// currencies without a minor unit (Stripe wants 1000 for 1000 JPY, not 100000)
+		$zero_decimal = array('BIF', 'CLP', 'DJF', 'GNF', 'JPY', 'KMF', 'KRW', 'MGA', 'PYG', 'RWF', 'UGX', 'VND', 'VUV', 'XAF', 'XOF', 'XPF');
+
+		if (in_array(strtoupper($order_info['currency_code']), $zero_decimal)) {
+			return (int)round($amount);
+		}
+
+		return (int)round($amount * 100);
+	}
+
+	/**
+	 * A payment id sent by the browser must be the payment which has been created for THIS order, for the amount of this order.
+	 * Without this check a customer could pay a cheap order and submit that (successful) payment for an expensive one.
+	 */
+	private function validateIntent($intent, $order_info) {
+		$order_id = isset($intent->metadata['OrderId']) ? (string)$intent->metadata['OrderId'] : '';
+
+		if ($order_id !== (string)$order_info['order_id']
+			|| (int)$intent->amount !== $this->getAmount($order_info)
+			|| strtolower((string)$intent->currency) !== strtolower($order_info['currency_code'])) {
+
+			$this->log->write('Stripe: payment ' . $intent->id . ' does not match order #' . $order_info['order_id'] . ' (payment order: ' . $order_id . ', payment amount: ' . $intent->amount . ' ' . $intent->currency . ', order amount: ' . $this->getAmount($order_info) . ' ' . $order_info['currency_code'] . ')');
+
+			throw new Exception("We could not verify this payment against your order. If you have been charged, please contact the store administrator with the reference " . $intent->id . ".");
 		}
 	}
 
